@@ -1,0 +1,99 @@
+# Default configuration for the Motion Agent VAD pipeline.
+# Every value here can be overridden with a CLI flag on the scripts in scripts/,
+# or by pointing --config at a copy of this file with your own edits.
+
+dataset:
+  # Root folder of the CUHK Avenue Dataset. Override with --data-root.
+  # Example (macOS): "~/Downloads/Avenue Dataset"
+  root: "~/Downloads/Avenue Dataset"
+
+  # Candidate sub-folder names for training/testing videos and ground truth.
+  # CUHK Avenue is distributed under a couple of different folder-naming
+  # conventions depending on where you downloaded it from, so the dataset
+  # loader searches these candidates (case-insensitive) and uses the first
+  # one that exists and contains video files.
+  train_dir_candidates:
+    - "training_videos"
+    - "training_vol"
+    - "training"
+    - "Avenue Dataset/training_videos"
+
+  test_dir_candidates:
+    - "testing_videos"
+    - "testing_vol"
+    - "testing"
+    - "Avenue Dataset/testing_videos"
+
+  gt_dir_candidates:
+    - "ground_truth_demo/testing_label_mask"
+    - "testing_label_mask"
+    - "ground_truth"
+    - "Avenue Dataset/ground_truth_demo/testing_label_mask"
+
+  video_extensions: [".avi", ".mp4", ".mkv"]
+
+grid:
+  rows: 8
+  cols: 8
+
+optical_flow:
+  # cv2.calcOpticalFlowFarneback parameters
+  pyr_scale: 0.5
+  levels: 3
+  winsize: 15
+  iterations: 3
+  poly_n: 5
+  poly_sigma: 1.2
+  flags: 0
+  # frames are resized (keeping aspect ratio) so the longer side equals this
+  # before flow / detection, purely for speed. Set to null to disable.
+  resize_longer_side: 640
+
+detection:
+  model: "yolov8n.pt"     # auto-downloaded by ultralytics on first use
+  conf_threshold: 0.35
+  iou_threshold: 0.5
+  classes: [0]             # COCO class 0 = person
+  device: "auto"            # "auto" -> mps on Apple Silicon, else cpu / cuda
+
+tracking:
+  tracker_config: "bytetrack.yaml"   # ships with ultralytics
+
+object_motion:
+  # number of past positions kept per track for speed/direction/acceleration
+  history_length: 30
+  # convert pixel speed to "pixels per second" using this fps fallback if a
+  # video's fps cannot be read
+  default_fps: 25.0
+
+deviation:
+  epsilon: 1.0e-6
+  # weight given to "this object's own motion vs. what's normal in this
+  # region" (the core contextual idea) vs. "how anomalous the region's
+  # aggregate optical flow is right now".
+  weight_object_motion: 0.65
+  weight_regional_motion: 0.35
+  # z-scores are capped at this value. Prevents regions with ~0 training
+  # variance from producing astronomically large, uninformative scores
+  # (see deviation.z_score docstring).
+  max_z_score: 50.0
+
+smoothing:
+  ema_alpha: 0.3   # higher = less smoothing, more responsive
+
+anomaly:
+  # Frame is flagged anomalous if the (smoothed) score exceeds this.
+  # This is a starting point -- scripts/evaluate.py also sweeps thresholds
+  # to report the best-F1 operating point and AUC, which do not depend on
+  # a single fixed threshold.
+  score_threshold: 2.5
+
+output:
+  dir: "outputs"
+  save_video: true
+  save_evidence_csv: true
+  save_evidence_json: true
+  video_fourcc: "mp4v"
+  # process every Nth frame (1 = every frame). Raising this speeds up runs
+  # on CPU at the cost of temporal resolution.
+  frame_stride: 1

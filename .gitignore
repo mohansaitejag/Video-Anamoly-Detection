@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+
+# YOLO weights auto-downloaded on first run
+*.pt
+
+# Large generated artifacts (regenerate with the scripts in scripts/)
+outputs/*
+!outputs/.gitkeep
+
+# Never commit the dataset itself
+data/*
+!data/.gitkeep
